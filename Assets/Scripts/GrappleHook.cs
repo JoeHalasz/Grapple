@@ -121,6 +121,7 @@ public class GrappleHook : MonoBehaviour
         {
             hitPoint = hit.point;
             // make a grapple
+            lr.enabled = true;
             grapple = new Grapple(transform.position, hitPoint);
         }
         else
@@ -132,43 +133,51 @@ public class GrappleHook : MonoBehaviour
     void endGrapple()
     {
         grappling = false;
-        grapple.DestroyGrapple();
+        if (grapple != null)
+            grapple.DestroyGrapple();
         grapple = null;
+        lr.enabled = false;
     }
 
     private class Grapple
     {
-        GrappleNode head;
+        GrappleNode head = null;
         double lengthBetweenNodes = 1;
+        GameObject player;
 
         public Grapple(Vector2 startPosition, Vector2 endPosition)
         {
+            // make the parent of the head the player
+            player = GameObject.Find("Player");
             double length = Vector2.Distance(startPosition, endPosition);
             // split the length into the number of nodes needed
             int numNodes = (int)(length / lengthBetweenNodes);
-            numNodes = 20;
+            numNodes = 10;
             double lengthPerNode = length / (numNodes+1);
-            GrappleNode currentNode = new GrappleNode(startPosition, lengthPerNode, 0);
+            Vector2 nextPosition = Vector2.Lerp(startPosition, endPosition, ((float)1 / numNodes));
+            GrappleNode currentNode = new GrappleNode(nextPosition, lengthPerNode, 1);
             head = currentNode;
-            for (int i = 1; i < numNodes+1; i++)
+            for (int i = 2; i < numNodes+1; i++)
             {
-                Vector2 nextPosition = Vector2.Lerp(startPosition, endPosition, (float)(i / numNodes));
+                nextPosition = Vector2.Lerp(startPosition, endPosition, ((float)i / numNodes));
                 GrappleNode nextNode = new GrappleNode(nextPosition, lengthPerNode, i);
                 currentNode.setForwardNode(nextNode);
                 currentNode.drawLine();
                 currentNode.createSpringJoint(lengthPerNode);
                 Debug.Log(currentNode.node.transform.name + " connected to " + nextNode.node.transform.name);
+                currentNode.node.transform.parent = nextNode.node.transform;
 
-                currentNode.node.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeAll;
+                // freeze position
+                currentNode.node.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePosition;
 
+                // set parent to head so that the head can move the whole grapple
                 currentNode = nextNode;
             }
-            // make the last node not able to move
-            currentNode.node.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeAll;
+            // make the last node static
+            currentNode.node.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePosition;
+            // same for head
+            head.node.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePosition;
 
-            // make the parent of the head the player
-            GameObject player = GameObject.Find("Player");
-            head.node.transform.parent = player.transform;
             // draw a line from the player to the current node
             LineRenderer lineRenderer = player.GetComponent<LineRenderer>();
             if (lineRenderer == null)
@@ -180,8 +189,11 @@ public class GrappleHook : MonoBehaviour
             SpringJoint2D joint = player.GetComponent<SpringJoint2D>();
             if (joint == null)
                 joint = player.AddComponent<SpringJoint2D>();
+            joint.enableCollision = false;
+            joint.frequency = 1f;
+            joint.dampingRatio = .5f;
             joint.connectedBody = head.node.GetComponent<Rigidbody2D>();
-            joint.distance = (float)lengthPerNode;
+            joint.distance = (float)length;
             Debug.Log("Head is " + head.node.transform.name);
         }
 
@@ -192,8 +204,11 @@ public class GrappleHook : MonoBehaviour
 
         public void updatePosition(Vector2 newPosition)
         {
-            head.node.transform.position = newPosition;
-            head.updatePosition();
+            head.node.transform.GetComponent<Rigidbody2D>().MovePosition(newPosition);
+            LineRenderer lineRenderer = player.GetComponent<LineRenderer>();
+            lineRenderer.SetPosition(0, player.transform.position);
+            lineRenderer.SetPosition(1, head.node.transform.position);
+            head.updateLRPositions();
         }
 
     }
@@ -238,7 +253,6 @@ public class GrappleHook : MonoBehaviour
             lineRenderer.startWidth = .1f;
             lineRenderer.endWidth = .1f;
             lineRenderer.SetPosition(1, forwardNode.node.transform.position);
-            
         }
 
         // create a spring joint between this node and the forward node
@@ -247,15 +261,15 @@ public class GrappleHook : MonoBehaviour
             if (forwardNode != null)
             {
                 SpringJoint2D joint = node.GetComponent<SpringJoint2D>();
-                joint.connectedBody = forwardNode.node.GetComponent<Rigidbody2D>();
                 joint.enableCollision = false;
                 joint.frequency = 1f;
                 joint.dampingRatio = .5f;
+                joint.connectedBody = forwardNode.node.GetComponent<Rigidbody2D>();
                 joint.distance = (float)length;
             }
         }
 
-        public void updatePosition()
+        public void updateLRPositions()
         {
             if (lineRenderer != null)
             {
@@ -263,7 +277,7 @@ public class GrappleHook : MonoBehaviour
                 if (forwardNode != null)
                 {
                     lineRenderer.SetPosition(1, forwardNode.node.transform.position);
-                    forwardNode.updatePosition();
+                    forwardNode.updateLRPositions();
                 }
             }
         }
