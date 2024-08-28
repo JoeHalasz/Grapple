@@ -13,6 +13,9 @@ public class GrappleHook : MonoBehaviour
     public float grappleMinDist = 5f;
     [SerializeField]
     public float grappleLengthChangeSpeed = .25f;
+
+    private GameObject hand; // the object that the grapple will shoot out of
+
     private bool grappling = false;
     private LineRenderer lr;
     private Vector2 grappleAnimationTarget;
@@ -23,6 +26,7 @@ public class GrappleHook : MonoBehaviour
     private bool needShortenGrapple = false;
     private bool needLengthenGrapple = false;
     private float speedPerFrame = 1f/60f;
+
 
     public LayerMask canGrappleTo;
 
@@ -38,13 +42,12 @@ public class GrappleHook : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        lr = GetComponent<LineRenderer>();
-        if (lr == null) 
-        {
-            Debug.Log("LineRenderer not found");
-        }
-        lr.enabled = false;
         player = GameObject.Find("Player");
+        hand = player.transform.Find("Hand").gameObject;
+        if (player.transform.Find("Hand") == null)
+        {
+            Debug.LogError("Player object must have a child object named Hand");
+        }
     }
 
     // Update is called once per frame
@@ -107,26 +110,23 @@ public class GrappleHook : MonoBehaviour
     {
         if (grapple != null)
         {
-            grapple.updatePosition(player.transform.position);
+            grapple.updateLRs();
         }
     }
 
     void startGrapple()
     {
-        grappling = true;
-        // ray from the player to the mouse
-        Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        RaycastHit2D hit = Physics2D.Raycast(transform.position, mousePos - (Vector2)transform.position, grappleMaxDist, canGrappleTo);
-        if (hit.collider != null)
+        if (grapple == null)
         {
-            hitPoint = hit.point;
-            // make a grapple
-            lr.enabled = true;
-            grapple = new Grapple(transform.position, hitPoint);
-        }
-        else
-        {
-            grappling = false;
+            Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            RaycastHit2D hit = Physics2D.Raycast(transform.position, mousePos - (Vector2)transform.position, grappleMaxDist, canGrappleTo);
+            if (hit.collider != null)
+            {
+                hitPoint = hit.point;
+                grappling = true;
+                Vector2 grappleStartPos = hand.transform.position;
+                grapple = new Grapple(grappleStartPos, hitPoint);
+            }
         }
     }
 
@@ -134,165 +134,89 @@ public class GrappleHook : MonoBehaviour
     {
         grappling = false;
         if (grapple != null)
-            grapple.DestroyGrapple();
+        {
+            foreach (GameObject go in grapple.Nodes)
+            {
+                Destroy(go);
+            }
+            grapple.Nodes.Clear();
+        }
         grapple = null;
-        lr.enabled = false;
     }
+
 
     private class Grapple
     {
-        GrappleNode head = null;
-        double lengthBetweenNodes = 1;
         GameObject player;
 
-        public Grapple(Vector2 startPosition, Vector2 endPosition)
-        {
-            // make the parent of the head the player
-            player = GameObject.Find("Player");
-            double length = Vector2.Distance(startPosition, endPosition);
-            // split the length into the number of nodes needed
-            int numNodes = (int)(length / lengthBetweenNodes);
-            numNodes = 10;
-            double lengthPerNode = length / (numNodes+1);
-            Vector2 nextPosition = Vector2.Lerp(startPosition, endPosition, ((float)1 / numNodes));
-            GrappleNode currentNode = new GrappleNode(nextPosition, lengthPerNode, 1);
-            head = currentNode;
-            for (int i = 2; i < numNodes+1; i++)
-            {
-                nextPosition = Vector2.Lerp(startPosition, endPosition, ((float)i / numNodes));
-                GrappleNode nextNode = new GrappleNode(nextPosition, lengthPerNode, i);
-                currentNode.setForwardNode(nextNode);
-                currentNode.drawLine();
-                currentNode.createSpringJoint(lengthPerNode);
-                Debug.Log(currentNode.node.transform.name + " connected to " + nextNode.node.transform.name);
-                currentNode.node.transform.parent = nextNode.node.transform;
-
-                // freeze position
-                currentNode.node.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePosition;
-
-                // set parent to head so that the head can move the whole grapple
-                currentNode = nextNode;
-            }
-            // make the last node static
-            currentNode.node.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePosition;
-            // same for head
-            head.node.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePosition;
-
-            // draw a line from the player to the current node
-            LineRenderer lineRenderer = player.GetComponent<LineRenderer>();
-            if (lineRenderer == null)
-                lineRenderer = player.AddComponent<LineRenderer>();
-            lineRenderer.SetPosition(0, player.transform.position);
-            lineRenderer.SetPosition(1, head.node.transform.position);
-            lineRenderer.startWidth = .1f;
-            // create a spring joint between the player and the current node
-            SpringJoint2D joint = player.GetComponent<SpringJoint2D>();
-            if (joint == null)
-                joint = player.AddComponent<SpringJoint2D>();
-            joint.enableCollision = false;
-            joint.frequency = 1f;
-            joint.dampingRatio = .5f;
-            joint.connectedBody = head.node.GetComponent<Rigidbody2D>();
-            joint.distance = (float)length;
-            Debug.Log("Head is " + head.node.transform.name);
-        }
-
-        public void DestroyGrapple()
-        {
-            head.DestroyGrappleNode();
-        }
-
-        public void updatePosition(Vector2 newPosition)
-        {
-            head.node.transform.GetComponent<Rigidbody2D>().MovePosition(newPosition);
-            LineRenderer lineRenderer = player.GetComponent<LineRenderer>();
-            lineRenderer.SetPosition(0, player.transform.position);
-            lineRenderer.SetPosition(1, head.node.transform.position);
-            head.updateLRPositions();
-        }
-
-    }
-
-    private class GrappleNode
-    {
-        public GameObject node;
-        private GrappleNode forwardNode = null;
-        private double length;
-        public LineRenderer lineRenderer;
+        double distBetweenPoints = 0.15;
+        double nodeMass = .35;
         
-        // constructor
-        public GrappleNode(Vector2 position, double length, int num)
-        {
-            this.node = new GameObject();
-            node.name = "GrappleNode" + num;
-            this.node.transform.position = position;
-            this.length = length;
-            // make sure node has a line render
-            node.AddComponent<LineRenderer>();
-            CircleCollider2D collider = node.AddComponent<CircleCollider2D>();
-            collider.radius = (float)length/4;
-            Rigidbody2D r = node.AddComponent<Rigidbody2D>();
-            node.AddComponent<SpringJoint2D>();
-            node.AddComponent<SpriteRenderer>();
-            node.GetComponent<SpriteRenderer>().sprite = GameObject.Find("Circle").GetComponent<SpriteRenderer>().sprite;
-            node.transform.localScale = new Vector2(.2f, .2f);
-        }
+        public List<GameObject> Nodes = new List<GameObject>();
 
-        public void setForwardNode(GrappleNode forwardNode)
+        public Grapple(Vector2 startPos, Vector2 endPos)
         {
-            this.forwardNode = forwardNode;
-        }
-
-        // draw a line between this node and the forward node
-        public void drawLine()
-        {
-            lineRenderer = node.GetComponent<LineRenderer>();
-            lineRenderer.enabled = true;
-            lineRenderer.SetPosition(0, node.transform.position);
-            // thickness
-            lineRenderer.startWidth = .1f;
-            lineRenderer.endWidth = .1f;
-            lineRenderer.SetPosition(1, forwardNode.node.transform.position);
-        }
-
-        // create a spring joint between this node and the forward node
-        public void createSpringJoint(double length)
-        {
-            if (forwardNode != null)
+            player = GameObject.Find("Player");
+            // calculate the points that the colliders, joints and LRs will start at
+            float dist = Vector2.Distance(startPos, endPos);
+            int numPoints = (int)(dist / distBetweenPoints);
+            // get the sprite from the "Circle" game object
+            Sprite sprite = GameObject.Find("Circle").GetComponent<SpriteRenderer>().sprite;
+            GameObject lastNode = player.GetComponent<Rigidbody2D>().gameObject;
+            for (int i = 1; i < numPoints+1; i++)
             {
-                SpringJoint2D joint = node.GetComponent<SpringJoint2D>();
-                joint.enableCollision = false;
-                joint.frequency = 1f;
-                joint.dampingRatio = .5f;
-                joint.connectedBody = forwardNode.node.GetComponent<Rigidbody2D>();
-                joint.distance = (float)length;
+                Vector2 pos = Vector2.Lerp(startPos, endPos, (float)i / numPoints);
+                GameObject node = makeGrappleNode(pos, lastNode);
+                node.transform.name = "Grapple" + i;
+                Nodes.Add(node);
+                lastNode = node;
+            }
+            makeNodeFinalNode(lastNode);
+            Debug.Log("Grapple created with " + Nodes.Count + " nodes");
+        }
+
+        private GameObject makeGrappleNode(Vector2 pos, GameObject lastNode)
+        {
+            GameObject node = new GameObject();
+            node.transform.position = pos;
+            node.transform.localScale = new Vector3(0.15f, 0.15f, 0.15f);
+            node.transform.SetParent(player.transform);
+            node.AddComponent<Rigidbody2D>();
+            node.GetComponent<Rigidbody2D>().mass = (float)nodeMass;
+            CircleCollider2D cc = node.AddComponent<CircleCollider2D>();
+            cc.radius = (float)distBetweenPoints / 2.0f;
+            node.AddComponent<HingeJoint2D>();
+            node.GetComponent<HingeJoint2D>().connectedBody = lastNode.GetComponent<Rigidbody2D>();
+            LineRenderer lr = node.AddComponent<LineRenderer>();
+            lr.positionCount = 2;
+            lr.SetPosition(0, lastNode.transform.position);
+            lr.SetPosition(1, node.transform.position);
+            lr.startWidth = 0.1f;
+            lr.endWidth = 0.1f;
+            // make it black
+            lr.material = new Material(Shader.Find("Sprites/Default"));
+            lr.startColor = Color.black;
+            lr.endColor = Color.black;
+            return node;
+        }
+
+        private void makeNodeFinalNode(GameObject node)
+        {
+            node.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePosition;
+            node.GetComponent<Rigidbody2D>().mass = 100000;
+        }
+
+        public void updateLRs()
+        {
+            // loop through all the nodes and update the line renderers
+            for (int i = 0; i < Nodes.Count-1; i++)
+            {
+                LineRenderer lr = Nodes[i].GetComponent<LineRenderer>();
+                lr.SetPosition(0, Nodes[i].transform.position);
+                lr.SetPosition(1, Nodes[i + 1].transform.position);
             }
         }
-
-        public void updateLRPositions()
-        {
-            if (lineRenderer != null)
-            {
-                lineRenderer.SetPosition(0, node.transform.position);
-                if (forwardNode != null)
-                {
-                    lineRenderer.SetPosition(1, forwardNode.node.transform.position);
-                    forwardNode.updateLRPositions();
-                }
-            }
-        }
-
-        // fuck the GC ( have to do this so temp gets cleaned up )
-        public void DestroyGrappleNode()
-        {
-            if (lineRenderer != null)
-                Destroy(lineRenderer);
-            if (node != null)
-                Destroy(node);
-            if (forwardNode != null)
-                forwardNode.DestroyGrappleNode();
-        }
-
     }
+    
 
 }
