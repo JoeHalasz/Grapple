@@ -8,11 +8,12 @@ public class GrappleHook : MonoBehaviour
     [SerializeField]
     public float animationTime = 0.5f;
     [SerializeField]
-    public float grappleMaxDist = 25f;
+    public int grappleMaxDist = 50;
     [SerializeField]
-    public float grappleMinDist = 5f;
+    public int grappleMinDist = 10;
     [SerializeField]
     public float grappleLengthChangeSpeed = .25f;
+    private int skipFramesForLengthChange = 0;
 
     private GameObject hand; // the object that the grapple will shoot out of
 
@@ -22,7 +23,7 @@ public class GrappleHook : MonoBehaviour
     // add a list of masks to accept
     private Vector2 hitPoint;
     private Vector2 currentAnimationHitPoint;
-    private SpringJoint2D joint;
+    private HingeJoint2D joint;
     private bool needShortenGrapple = false;
     private bool needLengthenGrapple = false;
     private float speedPerFrame = 1f/60f;
@@ -48,6 +49,7 @@ public class GrappleHook : MonoBehaviour
         {
             Debug.LogError("Player object must have a child object named Hand");
         }
+        
     }
 
     // Update is called once per frame
@@ -62,12 +64,12 @@ public class GrappleHook : MonoBehaviour
             endGrapple();
         }
         // if the player holds w, shorten the grapple
-        if (Input.GetKey(KeyCode.W) && grappling)
+        if (Input.GetKey(KeyCode.W) && grappling && skipFramesForLengthChange == 0)
         {
             needShortenGrapple = true;
         }
         // if the player holds s, lengthen the grapple
-        if (Input.GetKey(KeyCode.S) && grappling)
+        if (Input.GetKey(KeyCode.S) && grappling && skipFramesForLengthChange == 0)
         {
             needLengthenGrapple = true;
         }
@@ -75,35 +77,26 @@ public class GrappleHook : MonoBehaviour
 
     void FixedUpdate()
     {
-        // if (grappling)
-        // {
-        //     if (needShortenGrapple)
-        //     {
-        //         // check minDist
-        //         if (joint.distance - (grappleLengthChangeSpeed * speedPerFrame) < grappleMinDist)
-        //         {
-        //             joint.distance = grappleMinDist;
-        //         }
-        //         else
-        //         {
-        //             joint.distance -= (grappleLengthChangeSpeed * speedPerFrame);
-        //         }
-        //         needShortenGrapple = false;
-        //     }
-        //     if (needLengthenGrapple)
-        //     {
-        //         // check maxDist
-        //         if (joint.distance + (grappleLengthChangeSpeed * speedPerFrame) > grappleMaxDist)
-        //         {
-        //             joint.distance = grappleMaxDist;
-        //         }
-        //         else
-        //         {
-        //             joint.distance += (grappleLengthChangeSpeed * speedPerFrame);
-        //         }
-        //         needLengthenGrapple = false;
-        //     }
-        // }
+        if (grappling)
+        {
+            int changeBy = grappleLengthChangeSpeed < 1 ? 1 : (int)grappleLengthChangeSpeed;
+            if (needShortenGrapple)
+            {
+                grapple.shortenLength(changeBy);
+                needShortenGrapple = false;
+                skipFramesForLengthChange = (int)(1 / grappleLengthChangeSpeed);
+            }
+            if (needLengthenGrapple)
+            {
+                grapple.addLength(changeBy);
+                needLengthenGrapple = false;
+                skipFramesForLengthChange = (int)(1 / grappleLengthChangeSpeed);
+            }
+        }
+        if (skipFramesForLengthChange > 0)
+        {
+            skipFramesForLengthChange--;
+        }
     }
 
     void LateUpdate()
@@ -125,7 +118,7 @@ public class GrappleHook : MonoBehaviour
                 hitPoint = hit.point;
                 grappling = true;
                 Vector2 grappleStartPos = hand.transform.position;
-                grapple = new Grapple(grappleStartPos, hitPoint);
+                grapple = new Grapple(grappleStartPos, hitPoint, (int)grappleMinDist, (int)grappleMaxDist);
             }
         }
     }
@@ -148,20 +141,26 @@ public class GrappleHook : MonoBehaviour
     private class Grapple
     {
         GameObject player;
+        GameObject grappleGroup;
 
-        double distBetweenPoints = 0.15;
-        double nodeMass = .35;
-        
+        double distBetweenPoints = 0.2;
+        double nodeMass = .1;        
         public List<GameObject> Nodes = new List<GameObject>();
 
-        public Grapple(Vector2 startPos, Vector2 endPos)
+        int minLength;
+        int maxLength;
+
+        public Grapple(Vector2 startPos, Vector2 endPos, int minLength, int maxLength)
         {
+            this.minLength = minLength;
+            this.maxLength = maxLength;
             player = GameObject.Find("Player");
+            grappleGroup = new GameObject();
+            grappleGroup.transform.SetParent(player.transform);
             // calculate the points that the colliders, joints and LRs will start at
             float dist = Vector2.Distance(startPos, endPos);
             int numPoints = (int)(dist / distBetweenPoints);
             // get the sprite from the "Circle" game object
-            Sprite sprite = GameObject.Find("Circle").GetComponent<SpriteRenderer>().sprite;
             GameObject lastNode = player.GetComponent<Rigidbody2D>().gameObject;
             for (int i = 1; i < numPoints+1; i++)
             {
@@ -180,7 +179,7 @@ public class GrappleHook : MonoBehaviour
             GameObject node = new GameObject();
             node.transform.position = pos;
             node.transform.localScale = new Vector3(0.15f, 0.15f, 0.15f);
-            node.transform.SetParent(player.transform);
+            node.transform.SetParent(grappleGroup.transform);
             node.AddComponent<Rigidbody2D>();
             node.GetComponent<Rigidbody2D>().mass = (float)nodeMass;
             CircleCollider2D cc = node.AddComponent<CircleCollider2D>();
@@ -215,6 +214,74 @@ public class GrappleHook : MonoBehaviour
                 lr.SetPosition(0, Nodes[i].transform.position);
                 lr.SetPosition(1, Nodes[i + 1].transform.position);
             }
+        }
+
+        public void addLength(float amount)
+        {
+            for (int i = 0; i < (int)amount; i++)
+            {
+                if (Nodes.Count >= maxLength)
+                {
+                    return;
+                }
+                // break node 0 from node 1
+                HingeJoint2D front = Nodes[0].GetComponent<HingeJoint2D>();
+                Vector2 oldPos = Nodes[0].transform.position;
+                Rigidbody2D oldConnection = front.connectedBody;
+                HingeJoint2D next = Nodes[1].GetComponent<HingeJoint2D>();
+                // get dist between node 0 and 1
+                Vector2 diff = Nodes[0].transform.position - Nodes[1].transform.position;
+                Vector2 newPos = new Vector2(Nodes[0].transform.position.x + diff.x/2.0f, Nodes[0].transform.position.y + diff.y/2.0f);
+                // make a new node at the old position of node 0, connect it inbetween node 0 and 1, then put it in the list at index 1
+                GameObject newNode = makeGrappleNode(newPos, Nodes[1]);
+                newNode.transform.name = "GrappleAdded";
+                Nodes.Insert(0, newNode);
+                // connect node 0 to the new node
+                front.connectedBody = newNode.GetComponent<Rigidbody2D>();
+                newNode.GetComponent<HingeJoint2D>().connectedBody = oldConnection;
+                // move the transform of the old body(player) by diff
+                oldConnection.transform.position += new Vector3(diff.x, diff.y, 0)/2.0f;
+                // move the grappleGroup by -diff
+                grappleGroup.transform.position -= new Vector3(diff.x, diff.y, 0)/2.0f;
+                // fix the LRs
+                updateLRs();
+            }
+            Debug.Log("Grapple now has " + Nodes.Count + " nodes");
+        }
+
+
+        // returns if the grapple is still valid
+        public void shortenLength(float amount)
+        {
+            for (int i = 0; i < (int)amount; i++)
+            {
+                if (Nodes.Count <= minLength)
+                    break;
+                // break node 0 from node 1
+                HingeJoint2D front = Nodes[0].GetComponent<HingeJoint2D>();
+                HingeJoint2D next = Nodes[1].GetComponent<HingeJoint2D>();
+                Vector2 diff = Nodes[0].transform.position - Nodes[1].transform.position;
+                // set the next's connected body to the front's connected body
+                next.connectedBody = front.connectedBody;
+                // remove the front node
+                Destroy(Nodes[0]);
+                Nodes.RemoveAt(0);
+                // move the transform of the old body(player) by diff
+                next.connectedBody.transform.position -= new Vector3(diff.x, diff.y, 0);
+                Debug.Log(next.connectedBody.transform.name);
+                // move the grappleGroup by -diff
+                grappleGroup.transform.position += new Vector3(diff.x, diff.y, 0);
+                // fix the LRs
+                updateLRs();
+            }
+            Debug.Log("Grapple now has " + Nodes.Count + " nodes");
+            return;
+        }
+
+
+        public void shortenLength(float amount)
+        {
+            // maybe just shorten the dist between nodes?
         }
     }
     
