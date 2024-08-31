@@ -160,6 +160,7 @@ public class GrappleHook : MonoBehaviour
             // calculate the points that the colliders, joints and LRs will start at
             float dist = Vector2.Distance(startPos, endPos);
             int numPoints = (int)(dist / distBetweenPoints);
+            numPoints = 5;
             // get the sprite from the "Circle" game object
             GameObject lastNode = player.GetComponent<Rigidbody2D>().gameObject;
             for (int i = 1; i < numPoints+1; i++)
@@ -184,8 +185,11 @@ public class GrappleHook : MonoBehaviour
             node.GetComponent<Rigidbody2D>().mass = (float)nodeMass;
             CircleCollider2D cc = node.AddComponent<CircleCollider2D>();
             cc.radius = (float)distBetweenPoints / 2.0f;
-            node.AddComponent<HingeJoint2D>();
-            node.GetComponent<HingeJoint2D>().connectedBody = lastNode.GetComponent<Rigidbody2D>();
+            HingeJoint2D hj = node.AddComponent<HingeJoint2D>();
+            hj.connectedBody = lastNode.GetComponent<Rigidbody2D>();
+            DistanceJoint2D dj = node.AddComponent<DistanceJoint2D>();
+            dj.connectedBody = lastNode.GetComponent<Rigidbody2D>();
+            dj.distance = (float)distBetweenPoints;
             LineRenderer lr = node.AddComponent<LineRenderer>();
             lr.positionCount = 2;
             lr.SetPosition(0, lastNode.transform.position);
@@ -203,6 +207,7 @@ public class GrappleHook : MonoBehaviour
         {
             node.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePosition;
             node.GetComponent<Rigidbody2D>().mass = 100000;
+            Destroy(node.GetComponent<LineRenderer>());
         }
 
         public void updateLRs()
@@ -255,35 +260,32 @@ public class GrappleHook : MonoBehaviour
         {
             for (int i = 0; i < (int)amount; i++)
             {
-                if (Nodes.Count <= minLength)
+                if (Nodes.Count <= 1)
                     break;
                 // break node 0 from node 1
-                HingeJoint2D front = Nodes[0].GetComponent<HingeJoint2D>();
-                HingeJoint2D next = Nodes[1].GetComponent<HingeJoint2D>();
+                HingeJoint2D frontHj = Nodes[0].GetComponent<HingeJoint2D>();
+                HingeJoint2D nextHj = Nodes[1].GetComponent<HingeJoint2D>();
+                DistanceJoint2D frontDj = Nodes[0].GetComponent<DistanceJoint2D>();
+                DistanceJoint2D nextDj = Nodes[1].GetComponent<DistanceJoint2D>();
                 Vector2 diff = Nodes[0].transform.position - Nodes[1].transform.position;
                 // set the next's connected body to the front's connected body
-                next.connectedBody = front.connectedBody;
+                nextHj.connectedBody = frontHj.connectedBody;
+                nextDj.connectedBody = frontDj.connectedBody;
                 // remove the front node
                 Destroy(Nodes[0]);
                 Nodes.RemoveAt(0);
                 // move the transform of the old body(player) by diff
-                next.connectedBody.transform.position -= new Vector3(diff.x, diff.y, 0);
-                Debug.Log(next.connectedBody.transform.name);
+                nextHj.connectedBody.transform.position -= new Vector3(diff.x, diff.y, 0);
+                Debug.Log(nextHj.connectedBody.transform.name);
                 // move the grappleGroup by -diff
                 grappleGroup.transform.position += new Vector3(diff.x, diff.y, 0);
+                // fix the dist
+                nextDj.distance = (float)distBetweenPoints;
                 // fix the LRs
                 updateLRs();
             }
             Debug.Log("Grapple now has " + Nodes.Count + " nodes");
             return;
         }
-
-
-        public void shortenLength(float amount)
-        {
-            // maybe just shorten the dist between nodes?
-        }
     }
-    
-
 }
