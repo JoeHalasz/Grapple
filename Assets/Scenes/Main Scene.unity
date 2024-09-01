@@ -19672,7 +19672,7 @@ MonoBehaviour:
   animationTime: 0.5
   grappleMaxDist: 75
   grappleMinDist: 5
-  grappleLengthChangeSpeed: 0.25
+  grappleLengthChangeSpeed: 3
   canGrappleTo:
     serializedVersion: 2
     m_Bits: 8
