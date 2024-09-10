@@ -1,0 +1,10 @@
+// this file is for level data. Format data as follows for each level without any {}'s starting on line 10
+// {levelName}:{length},{startPosX},{startPosY},{endHeight}
+// where {length} is the number of "blocks" from the left most block to the right most
+// startPosX is the x position the player should spawn at
+// startPosY is the y position the player should spawn at
+// endHeight is the height of the ground where the level ends
+// EXAMPLE: Level1:124,5,0,0
+// This means that level 1 has a length of 124, the player should start at (5,0) and the level ends at a height of 0
+// REAL DATA:
+level1:100,-42,-4,0
