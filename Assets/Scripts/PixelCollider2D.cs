@@ -1,10 +1,10 @@
 // Select how you would like to handle unreadable textures by uncommenting one of the following #define statements:
 
 // If a texture is unreadable then use the asset loader to locate the file within the assets folder and read the pixel data directly from the file with System.IO. This option is recommended because it always works, however it can be quite slow because loading the image from disk each time takes a while.
-#define OnUnreadableTexture_ReadFileDirectly
+// #define OnUnreadableTexture_ReadFileDirectly
 
 // If a texture is unreadable then throw a System.Exception. This option can generate a lot of errors since textures are not readable by default, however it gives the most user control.
-// #define OnUnreadableTexture_ThrowError
+#define OnUnreadableTexture_ThrowError
 
 // If a texture is unreadable then use the asset loader to change the texture's settings to enable read/write access. This option offers the best performance because it makes the texture readable from now on thereby fixing any future errors, however it makes permanent changes to your texture's settings which may cause other issues.
 // #define OnUnreadableTexture_MakeTextureReadable
@@ -12,7 +12,7 @@
 
 
 // Uncomment the following to show gizmos displaying detailed debugging info for the underlying tracing algorithem. It is recommended to leave this disabled most of the time for preformance reasons.
-// #define PIXEL_TRACING_DEBUGGER
+#define PIXEL_TRACING_DEBUGGER
 
 
 
@@ -35,6 +35,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.U2D.Sprites;
 #endif
+using System.IO;
 
 // This component allows you to generate pixel perfect polygon colliders in one click!
 [RequireComponent(typeof(PolygonCollider2D))]
@@ -46,9 +47,14 @@ public sealed class PixelCollider2D : MonoBehaviour
     private SpriteRenderer spriteRenderer = null;
     private PolygonCollider2D polygonCollider = null;
 
+
     // Generates a pixel perfect outline of a sprite renderer and applies it to a polygon collider.
     public void Regenerate()
     {
+        StreamWriter writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("Regenerate called");
+        writer.Close();
+
         pixelSolidCondition.Threshold = Mathf.Clamp01(pixelSolidCondition.Threshold);
 
         // When in edit mode components change frequently so it's never safe to assume an old reference is still valid.
@@ -71,6 +77,9 @@ public sealed class PixelCollider2D : MonoBehaviour
         // Trace the sprite and apply the new polygons to the PolygonCollider2D.
         Vector2[][] polygons = PixelTracingHelper.TraceSprite(spriteRenderer.sprite, pixelSolidCondition);
         polygonCollider.pathCount = polygons.Length;
+        writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("Here1"+ polygons.Length);
+        writer.Close();
         for (int i = 0; i < polygons.Length; i++)
         {
             polygonCollider.SetPath(i, polygons[i]);
@@ -217,7 +226,9 @@ public static class PixelTracingHelper
         }
 
         Vector2Int[][] pixelPolygons = TraceTexture(sprite.texture, pixelSolidCondition, new RectInt((int)sprite.rect.xMin, (int)sprite.rect.yMin, (int)sprite.rect.width, (int)sprite.rect.height));
-
+        StreamWriter writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("here2");
+        writer.Close();
         float scale = 1.0f / sprite.pixelsPerUnit;
         float offsetX = -(sprite.pivot.x * scale);
         float offsetY = -(sprite.pivot.y * scale);
@@ -242,6 +253,9 @@ public static class PixelTracingHelper
     // Traces a pixel perfect outline of a given texture. Optionally traces only a small subsection within the texture as defined by rect.
     public static Vector2Int[][] TraceTexture(Texture2D texture, PixelSolidCondition pixelSolidCondition, RectInt? rect = null)
     {
+        StreamWriter writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("here3");
+        writer.Close();
         if (texture == null || texture.width == 0 || texture.height == 0)
         {
             return new Vector2Int[0][];
@@ -321,13 +335,18 @@ public static class PixelTracingHelper
         {
             pixelData = texture.GetPixels(rect.x, rect.y, rect.width, rect.height);
         }
-
+        StreamWriter writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("Here4");
+        writer.Close();
         // Compute whether each pixel is solid only once to save time. Then we can just look up values from the solidityMap later on.
         bool[] solidityMap = new bool[pixelData.Length];
         for (int i = 0; i < pixelData.Length; i++)
         {
             solidityMap[i] = pixelSolidCondition.IsPixelSolid(pixelData[i]);
         }
+        writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("here5");
+        writer.Close();
 
         // Cache the width and height of our rect for faster access.
         int width = rect.width;
@@ -372,6 +391,9 @@ public static class PixelTracingHelper
             leftLineSegments.AddLast(currentLineSegment);
             currentLineSegmentNull = true;
         }
+        writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("Here55");
+        writer.Close();
 
         // Add line segments for all the edges along the horizontal grid lines of the texture.
         bool currentLineSegmentRight = false;
@@ -444,6 +466,9 @@ public static class PixelTracingHelper
                 currentLineSegmentNull = true;
             }
         }
+        writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("Here6");
+        writer.Close();
 
         // Add line segments for all the edges along the very top of the texture.
         currentLineSegmentNull = true;
@@ -475,6 +500,9 @@ public static class PixelTracingHelper
             rightLineSegments.AddLast(currentLineSegment);
             currentLineSegmentNull = true;
         }
+        writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("Here7");
+        writer.Close();
 
         // Add line segments for all the edges along the very left of the texture.
         currentLineSegmentNull = true;
@@ -506,6 +534,9 @@ public static class PixelTracingHelper
             upLineSegments.AddLast(currentLineSegment);
             currentLineSegmentNull = true;
         }
+        writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("Here8");
+        writer.Close();
 
         // Add line segments for all the edges along the vertical grid lines of the texture.
         bool currentLineSegmentUp = false;
@@ -578,6 +609,9 @@ public static class PixelTracingHelper
                 currentLineSegmentNull = true;
             }
         }
+        writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("Here9");
+        writer.Close();
 
         // Add line segments for all the edges along the very right of the texture.
         currentLineSegmentNull = true;
@@ -609,6 +643,9 @@ public static class PixelTracingHelper
             downLineSegments.AddLast(currentLineSegment);
             currentLineSegmentNull = true;
         }
+        writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("Here10");
+        writer.Close();
 
 #if PIXEL_TRACING_DEBUGGER
         PixelTracingDebugger.SendDebugInfo(texture, upLineSegments.ToArray(), downLineSegments.ToArray(), rightLineSegments.ToArray(), leftLineSegments.ToArray());
@@ -616,8 +653,14 @@ public static class PixelTracingHelper
 
         // PHASE 2: Combine all the line segments into polygons.
         LinkedList<Vector2Int[]> polygons = new LinkedList<Vector2Int[]>();
+        writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("Here11");
+        writer.Close();
         while (leftLineSegments.Count + rightLineSegments.Count > 0)
         {
+            writer = new StreamWriter("Assets/Output.txt", true);
+            writer.WriteLine("Here12 " + leftLineSegments.Count + " " + rightLineSegments.Count);
+            writer.Close();
             LinkedList<Vector2Int> currentPolygon = new LinkedList<Vector2Int>();
             currentPolygon.AddFirst(rightLineSegments.First.Value.Start);
             currentPolygon.AddLast(rightLineSegments.First.Value.End);
@@ -634,9 +677,15 @@ public static class PixelTracingHelper
                 AddLineSegment(currentPolygon, upLineSegments);
                 currentPolygonGoofy = true;
             }
-
+            var lastFirstValue = new Vector2Int();
+            var lastLastValue = new Vector2Int();
             while (currentPolygon.First.Value != currentPolygon.Last.Value)
             {
+                writer = new StreamWriter("Assets/Output.txt", true);
+                writer.WriteLine("Here13" + currentPolygon.First.Value + " " + currentPolygon.Last.Value);
+                writer.Close();
+                lastFirstValue = currentPolygon.First.Value;
+                lastLastValue = currentPolygon.Last.Value;
                 if (currentPolygonGoofy)
                 {
                     if (AddLineSegment(currentPolygon, rightLineSegments))
@@ -690,7 +739,10 @@ public static class PixelTracingHelper
             currentPolygon.RemoveLast();
             polygons.AddLast(currentPolygon.ToArray());
         }
-
+        writer = new StreamWriter("Assets/Output.txt", true);
+        writer.WriteLine("Here14");
+        writer.Close();
+        
         return polygons.ToArray();
     }
 
