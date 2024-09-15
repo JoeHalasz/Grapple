@@ -7,4 +7,5 @@
 // EXAMPLE: Level1:124,5,0,0
 // This means that level 1 has a length of 124, the player should start at (5,0) and the level ends at a height of 0
 // REAL DATA:
-level1:100,-42,-4,0
+level1:100,-20,-4,0
+level2:100,-20,-4,0

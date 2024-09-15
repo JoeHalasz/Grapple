@@ -36,7 +36,7 @@ public class LevelManager : MonoBehaviour
         }
         List<GameObject> levelObjects = new List<GameObject>();
         // get each child from that and put it in the list 
-        foreach(Transform child in LevelsParentObject.transform)
+        foreach (Transform child in LevelsParentObject.transform)
         {
             levelObjects.Add(child.gameObject);
         }
@@ -45,14 +45,14 @@ public class LevelManager : MonoBehaviour
 
     // name of level to load, offset to move the level to, if we should move the player or not ( default true )
     // returns if the level is now loaded
-    public bool loadLevel(string levelName, Vector2 offset, bool movePlayer=true)
+    public bool loadLevel(string levelName, Vector2 offset, bool movePlayer = true)
     {
         Level level;
         try
         {
             level = AllLevels.Where(o => o.name == levelName).ElementAt(0);
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             Debug.LogError("Could not find level " + levelName + " to load");
             return false;
@@ -84,7 +84,7 @@ public class LevelManager : MonoBehaviour
         {
             level = AllLevels.Where(o => o.name == levelName).ElementAt(0);
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             Debug.LogError("Could not find level " + levelName + " to load");
             return false;
@@ -125,7 +125,7 @@ public class LevelManager : MonoBehaviour
 
         string saveData = File.ReadAllText(levelFile);
         string[] splitByLine = saveData.Split('\n'); // \n is the character for new line
-        for (int i = fileStartPos-1; i < splitByLine.Length; i++)
+        for (int i = fileStartPos - 1; i < splitByLine.Length; i++)
         {
             string name;
             int length;
@@ -135,7 +135,6 @@ public class LevelManager : MonoBehaviour
             Debug.Log(splitByLine[i]);
             try
             {
-                
                 if (splitByLine[i] == "" || splitByLine[i] == " ") // skip if its an empty line
                 {
                     continue;
@@ -147,7 +146,7 @@ public class LevelManager : MonoBehaviour
                 yStartPos = int.Parse(levelDataString[2]);
                 endHeight = int.Parse(levelDataString[3]);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Debug.LogError("Could not parse line " + i + " in levels.data file");
                 continue;
@@ -158,7 +157,7 @@ public class LevelManager : MonoBehaviour
             {
                 matchingObj = levelObjects.Where(o => o.name == name).ElementAt(0);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Debug.LogError("Could not find a level object named " + name);
                 continue;
