@@ -19,12 +19,12 @@ public class GrappleHook : MonoBehaviour
     private Vector2 grappleAnimationTarget;
     private bool endingGrapple = false;
     // add a list of masks to accept
-    private Vector2 hitPoint;
     private Vector2 currentAnimationHitPoint;
     private SpringJoint2D joint;
     private bool needShortenGrapple = false;
     private bool needLengthenGrapple = false;
     private float speedPerFrame = 1f/60f;
+    GameObject grappledTo;
 
     public LayerMask canGrappleTo;
 
@@ -76,32 +76,8 @@ public class GrappleHook : MonoBehaviour
     {
         if (grappling)
         {
-            if (needShortenGrapple)
-            {
-                // check minDist
-                if (joint.distance - (grappleLengthChangeSpeed * speedPerFrame * grappleLengthChangeSpeed) < grappleMinDist)
-                {
-                    joint.distance = grappleMinDist;
-                }
-                else
-                {
-                    joint.distance -= (grappleLengthChangeSpeed * speedPerFrame * grappleLengthChangeSpeed);
-                }
-                needShortenGrapple = false;
-            }
-            if (needLengthenGrapple)
-            {
-                // check maxDist
-                if (joint.distance + (grappleLengthChangeSpeed * speedPerFrame * grappleLengthChangeSpeed) > grappleMaxDist)
-                {
-                    joint.distance = grappleMaxDist;
-                }
-                else
-                {
-                    joint.distance += (grappleLengthChangeSpeed * speedPerFrame * grappleLengthChangeSpeed);
-                }
-                needLengthenGrapple = false;
-            }
+            checkCollision();
+            checkLengthChange();
         }
     }
 
@@ -113,39 +89,81 @@ public class GrappleHook : MonoBehaviour
         }
     }
 
+    void checkCollision()
+    {
+        float leewayAmount = 0.3f;
+        Vector2 hitPoint = grappledTo.transform.position;
+        // if we draw a ray from the grapple to the connected object and it hits something, then we hit something
+        RaycastHit2D hit = Physics2D.Raycast(transform.position, hitPoint - (Vector2)transform.position, Vector2.Distance(hitPoint, (Vector2)transform.position) - leewayAmount, canGrappleTo); // doing 95% of the way to the connected object for some leeway
+        Vector2 leeway = (hitPoint - (Vector2)transform.position).normalized * leewayAmount;
+        Debug.DrawRay(transform.position, (hitPoint - (Vector2)transform.position) - leeway, Color.red, 1);
+        if (hit.collider != null && hit.collider.gameObject != grappledTo)
+        {
+            Debug.Log("Snap!");
+            endGrapple();
+        }
+    }
+
+    void checkLengthChange()
+    {
+        if (needShortenGrapple)
+        {
+            // check minDist
+            if (joint.distance - (grappleLengthChangeSpeed * speedPerFrame * grappleLengthChangeSpeed) < grappleMinDist)
+            {
+                joint.distance = grappleMinDist;
+            }
+            else
+            {
+                joint.distance -= (grappleLengthChangeSpeed * speedPerFrame * grappleLengthChangeSpeed);
+            }
+            needShortenGrapple = false;
+        }
+        if (needLengthenGrapple)
+        {
+            // check maxDist
+            if (joint.distance + (grappleLengthChangeSpeed * speedPerFrame * grappleLengthChangeSpeed) > grappleMaxDist)
+            {
+                joint.distance = grappleMaxDist;
+            }
+            else
+            {
+                joint.distance += (grappleLengthChangeSpeed * speedPerFrame * grappleLengthChangeSpeed);
+            }
+            needLengthenGrapple = false;
+        }
+    }
+
     void startGrapple()
     {
-        grappling = true;
-        // ray from the player to the mouse
-        Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        RaycastHit2D hit = Physics2D.Raycast(transform.position, mousePos - (Vector2)transform.position, grappleMaxDist, canGrappleTo);
-        Debug.Log(mousePos);
-        Debug.Log(hit.point);
-        if (hit.collider != null)
+        if (!isGrappling())
         {
-            hitPoint = hit.point;
-            joint = gameObject.AddComponent<SpringJoint2D>();
-            joint.enableCollision = true;
+            // ray from the player to the mouse
+            Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            RaycastHit2D hit = Physics2D.Raycast(transform.position, mousePos - (Vector2)transform.position, grappleMaxDist, canGrappleTo);
+            if (hit.distance <= grappleMaxDist && hit.collider != null)
+            {
+                grappling = true;
+                joint = gameObject.AddComponent<SpringJoint2D>();
+                joint.enableCollision = true;
 
-            joint.connectedAnchor = hitPoint;
+                // make a gameObject that is the same size as the line render for collisions
+                grappledTo = new GameObject();
+                // make its position the middle of the line
+                grappledTo.transform.position = hit.point;    
+                // make the grappledTo's parent the thing we hit
+                grappledTo.transform.SetParent(hit.collider.gameObject.transform);
+                // give it a rigidbody2D
+                Rigidbody2D rb = grappledTo.AddComponent<Rigidbody2D>();
+                // make it kinematic
+                rb.isKinematic = true;
             
-            joint.autoConfigureDistance = true;
+                joint.connectedBody = rb;
+                joint.autoConfigureDistance = true;
 
-            joint.frequency = 1f;
-            joint.dampingRatio = .5f;
-
-            // make a gameObject that is the same size as the line render for collisions
-            GameObject grappleCollider = new GameObject();
-            // make its position the middle of the line
-            grappleCollider.transform.position = (hitPoint + (Vector2)transform.position) / 2;
-            // add a box collider
-            // make the it the size of the line
-            grappleCollider.transform.localScale = new Vector3(Vector2.Distance(hitPoint, (Vector2)transform.position), 0.1f, 1);
-            grappleCollider.transform.localScale *= .9f; // make it slightly smaller so it doesnt trigger when it shouldn't
-            // make it trigger endGrapple on collision
-            BoxCollider2D box = grappleCollider.AddComponent<BoxCollider2D>();
-            box.isTrigger = true;
-            
+                joint.frequency = 1;
+                joint.dampingRatio = .5f;
+            }
         }
     }
 
@@ -153,6 +171,7 @@ public class GrappleHook : MonoBehaviour
     {
         grappling = false;
         Destroy(joint);
+        Destroy(grappledTo);
         lr.enabled = false;
     }
 
@@ -160,7 +179,7 @@ public class GrappleHook : MonoBehaviour
     {
         lr.enabled = true;
         lr.SetPosition(0, transform.position);
-        lr.SetPosition(1, hitPoint);
+        lr.SetPosition(1, grappledTo.transform.position);
     }
 
 
