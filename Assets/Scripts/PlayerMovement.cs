@@ -9,19 +9,27 @@ public class PlayerMovement : MonoBehaviour
 {
 
     Rigidbody2D player;
-    [SerializeField][Range(10, 200)]
+    [SerializeField]
+    [Range(10, 200)]
     public float speed;
-    [SerializeField][Range(1, 20)]
+    [SerializeField]
+    [Range(1, 20)]
     public float jumpStrength;
 
-    [SerializeField][Range(1, 20)]
+    [SerializeField]
+    [Range(1, 20)]
     public float maxRunningSpeed;
 
     private float currentXInput = 0;
     private bool jumped = false;
+    int jumpCount = 0;
+    [SerializeField]
+    int maxJump = 3;
+
+    int currentZ = 0;
 
     // save a double for (1f/60f) to avoid recalculating it every frame
-    private float speedPerFrame = 1f/60f;
+    private float speedPerFrame = 1f / 60f;
 
     // grapplehook script
     private GrappleHook grappleHookScript;
@@ -34,7 +42,7 @@ public class PlayerMovement : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update() 
+    void Update()
     {
         // if d key is pressed, set the currentXInput to 1
         currentXInput = 0;
@@ -47,19 +55,30 @@ public class PlayerMovement : MonoBehaviour
         {
             currentXInput = -1f;
         }
-        if (!jumped && isGrounded())
+        if (!jumped && (isGrounded() || jumpCount < maxJump))
+        {
             jumped = Input.GetKeyDown(KeyCode.Space) ? true : false;
+        }
     }
 
     // FixedUpdate is called once per physics frame ( 60 time a second right now )
     void FixedUpdate()
     {
-        if (isGrounded()) 
+        if (currentZ >= 360)
+        {
+            currentZ = 0;
+        }
+        if (currentZ != 0)
+        {
+            currentZ += 360 / 40;
+        }
+
+        if (isGrounded())
         {
             // move the player using acceleration, and if the player is grounded, slow them down
             if (currentXInput != 0)
                 player.velocity += new Vector2(currentXInput * speed * speedPerFrame, 0);
-            else 
+            else
             {
                 if (player.velocity.x > 0)
                 {
@@ -75,11 +94,11 @@ public class PlayerMovement : MonoBehaviour
                 }
             }
             // accelerate towards the max speed if we are over
-            if (player.velocity.x > maxRunningSpeed) 
+            if (player.velocity.x > maxRunningSpeed)
             {
                 player.velocity -= new Vector2(speed * speedPerFrame * 2, 0);
             }
-            if (player.velocity.x < -maxRunningSpeed) 
+            if (player.velocity.x < -maxRunningSpeed)
             {
                 player.velocity += new Vector2(speed * speedPerFrame * 2, 0);
             }
@@ -89,31 +108,43 @@ public class PlayerMovement : MonoBehaviour
         {
             // slowly accelerate the player in the air if grappling
             //if (grappleHookScript.isGrappling())
-                player.velocity += new Vector2(currentXInput * speed * speedPerFrame *.2f, 0);
+            player.velocity += new Vector2(currentXInput * speed * speedPerFrame * .2f, 0);
         }
-        if (jumped) 
+        if (jumped)
         {
+            if (isGrounded())
+            {
+                jumpCount = 0;
+            }
+            jumpCount++;
             player.velocity = new Vector2(player.velocity.x, jumpStrength);
             jumped = false;
+            currentZ += 360 / 40;
+            // Debug.Log(currentZ);
         }
     }
-
-    bool isGrounded() 
+    void LateUpdate()
     {
-        RaycastHit2D[] hit;
-        // raycast that doesnt hit the player 
-        hit = Physics2D.RaycastAll(transform.position, Vector2.down, 1.1f);
-        //draw it in the scene view
-        Debug.DrawRay(transform.position, Vector2.down * 1.1f, Color.red);
-        
-
-        foreach (RaycastHit2D h in hit) {
-            if (h.collider != null && h.collider.tag != "Player")
-            {
-                return true;
-            }
-        }
-        return false;
-
+        transform.eulerAngles = new Vector3 (0, 0, currentZ);
     }
+
+    bool isGrounded()
+        {
+            RaycastHit2D[] hit;
+            // raycast that doesnt hit the player 
+            hit = Physics2D.RaycastAll(transform.position, Vector2.down, .6f);
+            //draw it in the scene view
+            Debug.DrawRay(transform.position, Vector2.down * .6f, Color.red);
+
+
+            foreach (RaycastHit2D h in hit)
+            {
+                if (h.collider != null && h.collider.tag != "Player")
+                {
+                    return true;
+                }
+            }
+            return false;
+        
+        }
 }
