@@ -88,8 +88,8 @@ public class PlayerMovement : MonoBehaviour
         else // floating or grappling physics
         {
             // slowly accelerate the player in the air if grappling
-            if (grappleHookScript.isGrappling())
-                player.velocity += new Vector2(currentXInput * speed * speedPerFrame *.05f, 0);
+            //if (grappleHookScript.isGrappling())
+                player.velocity += new Vector2(currentXInput * speed * speedPerFrame *.2f, 0);
         }
         if (jumped) 
         {
