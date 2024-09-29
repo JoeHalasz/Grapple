@@ -130,7 +130,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      mikuhearttrans_0: -184162364924402297
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
