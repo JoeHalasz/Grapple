@@ -100,7 +100,7 @@ public class GrappleHook : MonoBehaviour
         if (hit.collider != null && hit.collider.gameObject != grappledTo)
         {
             Debug.Log("Snap!");
-            endGrapple();
+            breakGrapple();
         }
     }
 
@@ -165,6 +165,11 @@ public class GrappleHook : MonoBehaviour
                 joint.dampingRatio = .5f;
             }
         }
+    }
+
+    public void breakGrapple()
+    {
+        endGrapple();
     }
 
     void endGrapple()

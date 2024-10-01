@@ -53,8 +53,19 @@ public class PlayerMovement : MonoBehaviour
         {
             currentXInput = -1f;
         }
-        if (!jumped && (isGrounded() || numTimesJumped < maxJumps))
-            jumped = Input.GetKeyDown(KeyCode.Space) ? true : false;
+        if(Input.GetKeyDown(KeyCode.Space))
+        {
+            if (!jumped)
+            {
+                jumped = true;
+            }
+            if (isGrounded())
+            {
+                numTimesJumped = 0;
+            }
+        }
+        
+        
     }
 
     // FixedUpdate is called once per physics frame ( 60 time a second right now )
@@ -107,12 +118,12 @@ public class PlayerMovement : MonoBehaviour
 
         if (jumped) 
         {
-            if (isGrounded())
+            grappleHookScript.breakGrapple();
+            if (numTimesJumped < maxJumps)
             {
-                numTimesJumped = 0;
+                numTimesJumped++;
+                player.velocity = new Vector2(player.velocity.x, jumpStrength);
             }
-            numTimesJumped++;
-            player.velocity = new Vector2(player.velocity.x, jumpStrength);
             jumped = false;
         }
     }
