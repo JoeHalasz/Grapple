@@ -170,8 +170,6 @@ public class GrappleHook : MonoBehaviour
             }
             needLengthenGrapple = false;
         }
-        Debug.Log(joint.distance);
-
     }
 
     void startGrapple()
