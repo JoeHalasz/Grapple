@@ -140,6 +140,7 @@ public class GrappleHook : MonoBehaviour
 
     void checkLengthChange()
     {
+        float currentGrappleAngle = getAngle(transform.position, grappledTo.transform.position);
         if (needShortenGrapple)
         {
             // check minDist
@@ -153,7 +154,7 @@ public class GrappleHook : MonoBehaviour
             }
             needShortenGrapple = false;
         }
-        if (needLengthenGrapple)
+        if (needLengthenGrapple && (currentGrappleAngle < -195 || currentGrappleAngle > 15) )
         {
             // check maxDist
             if (joint.distance + (grappleLengthChangeSpeed * speedPerFrame * grappleLengthChangeSpeed) > grappleMaxDist)
