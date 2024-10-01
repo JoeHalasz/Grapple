@@ -13,9 +13,12 @@ public class PlayerMovement : MonoBehaviour
     public float speed;
     [SerializeField][Range(1, 20)]
     public float jumpStrength;
-
     [SerializeField][Range(1, 20)]
     public float maxRunningSpeed;
+    [SerializeField][Range(0,1)]
+    public float airControlAccelerationDebuff;
+    [SerializeField][Range(1,5)]
+    public int maxJumps;
 
     private float currentXInput = 0;
     private bool jumped = false;
@@ -25,6 +28,9 @@ public class PlayerMovement : MonoBehaviour
 
     // grapplehook script
     private GrappleHook grappleHookScript;
+
+    private int numTimesJumped = 0;
+
 
     // Start is called before the first frame update
     void Start()
@@ -47,19 +53,19 @@ public class PlayerMovement : MonoBehaviour
         {
             currentXInput = -1f;
         }
-        if (!jumped && isGrounded())
+        if (!jumped && (isGrounded() || numTimesJumped < maxJumps))
             jumped = Input.GetKeyDown(KeyCode.Space) ? true : false;
     }
 
     // FixedUpdate is called once per physics frame ( 60 time a second right now )
     void FixedUpdate()
     {
-        if (isGrounded()) 
+        float groundedModifier = airControlAccelerationDebuff;
+        if (isGrounded())
         {
-            // move the player using acceleration, and if the player is grounded, slow them down
-            if (currentXInput != 0)
-                player.velocity += new Vector2(currentXInput * speed * speedPerFrame, 0);
-            else 
+            groundedModifier = 1f;
+            // slow the player down if they didnt attempt to move and they are grounded
+            if (currentXInput == 0) 
             {
                 if (player.velocity.x > 0)
                 {
@@ -74,25 +80,38 @@ public class PlayerMovement : MonoBehaviour
                         player.velocity = new Vector2(0, player.velocity.y);
                 }
             }
-            // accelerate towards the max speed if we are over
+            // accelerate towards the max speed if we are over the max speed
             if (player.velocity.x > maxRunningSpeed) 
             {
-                player.velocity -= new Vector2(speed * speedPerFrame * 2, 0);
+                player.velocity -= new Vector2(speed * groundedModifier * speedPerFrame * 2, 0);
             }
             if (player.velocity.x < -maxRunningSpeed) 
             {
-                player.velocity += new Vector2(speed * speedPerFrame * 2, 0);
+                player.velocity += new Vector2(speed * groundedModifier * speedPerFrame * 2, 0);
             }
-
         }
-        else // floating or grappling physics
+        // if we are going over the max speed, player cant speed up anymore
+        if (player.velocity.x > maxRunningSpeed && currentXInput > 0)
         {
-            // slowly accelerate the player in the air if grappling
-            if (grappleHookScript.isGrappling())
-                player.velocity += new Vector2(currentXInput * speed * speedPerFrame *.05f, 0);
+            currentXInput = 0;
         }
+        if (player.velocity.x < -maxRunningSpeed && currentXInput < 0)
+        {
+            currentXInput = 0;
+        }
+
+        // move the player using acceleration
+        if (currentXInput != 0)
+            player.velocity += new Vector2(currentXInput * speed * groundedModifier * speedPerFrame, 0);
+        
+
         if (jumped) 
         {
+            if (isGrounded())
+            {
+                numTimesJumped = 0;
+            }
+            numTimesJumped++;
             player.velocity = new Vector2(player.velocity.x, jumpStrength);
             jumped = false;
         }
