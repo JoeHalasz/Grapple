@@ -25,6 +25,7 @@ public class GrappleHook : MonoBehaviour
     private bool needLengthenGrapple = false;
     private float speedPerFrame = 1f/60f;
     GameObject grappledTo;
+    private float speedLowTime = 0;
 
     public LayerMask canGrappleTo;
 
@@ -77,7 +78,12 @@ public class GrappleHook : MonoBehaviour
         if (grappling)
         {
             checkCollision();
+            checkShouldBreak();
             checkLengthChange();
+        }
+        else
+        {
+            speedLowTime = 0;
         }
     }
 
@@ -86,6 +92,25 @@ public class GrappleHook : MonoBehaviour
         if (grappling)
         {
             drawGrapple();
+        }
+    }
+
+    void checkShouldBreak()
+    {
+        // if the player's x velocity has been under .5f for 1 second and the angle between the player and the grapple pos is above 30 and below 150, break the grapple
+        if (Mathf.Abs(GetComponent<Rigidbody2D>().velocity.x) < .5f)
+        {
+            speedLowTime += Time.deltaTime;
+        }
+        float angle = Vector2.Angle(transform.position, grappledTo.transform.position);
+        // draw a line at that angle from the player
+        if (speedLowTime > .1f)
+        {
+            if (angle < 60)
+            {
+                breakGrapple();
+                speedLowTime = 0;
+            }
         }
     }
 
