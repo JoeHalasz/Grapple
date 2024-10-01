@@ -65,9 +65,13 @@ public class PlayerMovement : MonoBehaviour
                 {
                     jumped = true;
                 }
-                if (isGrounded())
+            }
+            if (isGrounded())
+            {
+                numTimesJumped = 0;
+                if (!jumped)
                 {
-                    numTimesJumped = 0;
+                    jumped = true;
                 }
             }
         }

@@ -95,6 +95,14 @@ public class GrappleHook : MonoBehaviour
         }
     }
 
+
+    float getAngle(Vector2 pos1, Vector2 pos2)
+    {
+        // get the angle between the two points compared to the x Axis
+        float angle = Mathf.Atan2(pos2.y - pos1.y, pos2.x - pos1.x) * Mathf.Rad2Deg;
+        return angle;
+    }
+
     void checkShouldBreak()
     {
         // if the player's x velocity has been under .5f for 1 second and the angle between the player and the grapple pos is above 30 and below 150, break the grapple
@@ -102,11 +110,12 @@ public class GrappleHook : MonoBehaviour
         {
             speedLowTime += Time.deltaTime;
         }
-        float angle = Vector2.Angle(transform.position, grappledTo.transform.position);
+        float angle = getAngle(transform.position, grappledTo.transform.position);
+        Debug.Log(angle);
         // draw a line at that angle from the player
         if (speedLowTime > .1f)
         {
-            if (angle < 60)
+            if (angle > -150 && angle < -30)
             {
                 breakGrapple();
                 speedLowTime = 0;
