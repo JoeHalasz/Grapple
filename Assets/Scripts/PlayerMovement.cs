@@ -55,17 +55,22 @@ public class PlayerMovement : MonoBehaviour
         }
         if(Input.GetKeyDown(KeyCode.Space))
         {
-            if (!jumped)
+            if (grappleHookScript.isGrappling())
             {
-                jumped = true;
+                grappleHookScript.breakGrapple();
             }
-            if (isGrounded())
+            else
             {
-                numTimesJumped = 0;
+                if (!jumped)
+                {
+                    jumped = true;
+                }
+                if (isGrounded())
+                {
+                    numTimesJumped = 0;
+                }
             }
         }
-        
-        
     }
 
     // FixedUpdate is called once per physics frame ( 60 time a second right now )
@@ -118,11 +123,11 @@ public class PlayerMovement : MonoBehaviour
 
         if (jumped) 
         {
-            grappleHookScript.breakGrapple();
-            if (numTimesJumped < maxJumps)
+            // if the player has jumps left and is not moving upwards and is not grappling
+            if (numTimesJumped < maxJumps && player.velocity.y <= 0)
             {
+                player.velocity += new Vector2(0, jumpStrength);
                 numTimesJumped++;
-                player.velocity = new Vector2(player.velocity.x, jumpStrength);
             }
             jumped = false;
         }
