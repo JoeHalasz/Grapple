@@ -26,6 +26,8 @@ public class GrappleHook : MonoBehaviour
     private float speedPerFrame = 1f/60f;
     GameObject grappledTo;
     private float speedLowTime = 0;
+    private PlayerMovement playerMovementScript;
+    private GameObject player;
 
     public LayerMask canGrappleTo;
 
@@ -37,6 +39,8 @@ public class GrappleHook : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        player = GameObject.Find("Player");
+        playerMovementScript = player.GetComponent<PlayerMovement>();
         lr = GetComponent<LineRenderer>();
         if (lr == null) 
         {
@@ -111,7 +115,6 @@ public class GrappleHook : MonoBehaviour
             speedLowTime += Time.deltaTime;
         }
         float angle = getAngle(transform.position, grappledTo.transform.position);
-        Debug.Log(angle);
         // draw a line at that angle from the player
         if (speedLowTime > .1f)
         {
@@ -141,7 +144,7 @@ public class GrappleHook : MonoBehaviour
     void checkLengthChange()
     {
         float currentGrappleAngle = getAngle(transform.position, grappledTo.transform.position);
-        if (needShortenGrapple)
+        if (needShortenGrapple && !playerMovementScript.isGrounded())
         {
             // check minDist
             if (joint.distance - (grappleLengthChangeSpeed * speedPerFrame * grappleLengthChangeSpeed) < grappleMinDist)
@@ -154,7 +157,7 @@ public class GrappleHook : MonoBehaviour
             }
             needShortenGrapple = false;
         }
-        if (needLengthenGrapple && (currentGrappleAngle < -195 || currentGrappleAngle > 15) )
+        if (needLengthenGrapple && (currentGrappleAngle < -195 || currentGrappleAngle > 15) && !playerMovementScript.isGrounded() )
         {
             // check maxDist
             if (joint.distance + (grappleLengthChangeSpeed * speedPerFrame * grappleLengthChangeSpeed) > grappleMaxDist)
@@ -167,6 +170,8 @@ public class GrappleHook : MonoBehaviour
             }
             needLengthenGrapple = false;
         }
+        Debug.Log(joint.distance);
+
     }
 
     void startGrapple()

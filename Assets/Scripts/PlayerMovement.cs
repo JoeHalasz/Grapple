@@ -137,7 +137,7 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    bool isGrounded() 
+    public bool isGrounded() 
     {
         RaycastHit2D[] hit;
         // raycast that doesnt hit the player 
