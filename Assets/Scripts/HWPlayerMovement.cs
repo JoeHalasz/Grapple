@@ -6,7 +6,6 @@ public class HWPlayerMovement : MonoBehaviour
 {
 
     Rigidbody2D player;
-    Vector3 playerPos;
     bool isColliding;
 
     [SerializeField]
