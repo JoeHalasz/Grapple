@@ -33,7 +33,7 @@ public class MoveTowards : MonoBehaviour
        
         currentPos = transform.position;
         targetPos = targetToFollow.transform.position;
-        distance = Vector2.Distance(currentPos, targetPos);
+        distance = Vector2.Distance(currentPos, targetPos + offsetPos);
         accelRate = speed * distance * Time.deltaTime;
         transform.position = Vector2.MoveTowards(currentPos, targetPos + offsetPos, accelRate);
     }
