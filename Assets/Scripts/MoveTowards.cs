@@ -11,14 +11,15 @@ public class MoveTowards : MonoBehaviour
     Vector2 targetPos;
     Vector2 currentPos;
     Vector2 offsetPos;
-    float maxDistance;
+    float distance;
+    float accelRate;
 
     [SerializeField]
     float speed;
 
     void Start()
     {
-        maxDistance = speed * Time.deltaTime;
+        
 
         targetPos = targetToFollow.transform.position;
         currentPos = transform.position;
@@ -28,8 +29,12 @@ public class MoveTowards : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
+       
         currentPos = transform.position;
         targetPos = targetToFollow.transform.position;
-        transform.position = Vector2.MoveTowards(currentPos, targetPos + offsetPos, maxDistance);
+        distance = Vector2.Distance(currentPos, targetPos);
+        accelRate = speed * distance * Time.deltaTime;
+        transform.position = Vector2.MoveTowards(currentPos, targetPos + offsetPos, accelRate);
     }
 }
