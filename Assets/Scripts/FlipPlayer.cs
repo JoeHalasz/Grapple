@@ -7,12 +7,11 @@ public class FlipPlayer : MonoBehaviour
 {
     KeyCode currentKey;
     KeyCode prevKey;
-    float currentRot;
     // Start is called before the first frame update
     void Start()
     {
         currentKey = KeyCode.None;
-       currentRot = transform.localRotation.y;
+        prevKey = KeyCode.D;
     }
 
     // Update is called once per frame
@@ -34,12 +33,7 @@ public class FlipPlayer : MonoBehaviour
     {
         if( currentKey != prevKey)
         {
-            currentRot += 180f;
-            if( currentRot >= 360f)
-            {
-                currentRot = 0f;
-            }
-            transform.localRotation = new Quaternion(0, currentRot, 0, 0);
+            transform.Rotate(0, 180, 0);
         }
         prevKey = currentKey;
     }
