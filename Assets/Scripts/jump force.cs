@@ -18,7 +18,7 @@ public class jumpforce : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            body.AddForce(new Vector2(0, 100));
+            body.AddForce(new Vector2(0, 75));
         }
 
         Debug.Log(body.position);
