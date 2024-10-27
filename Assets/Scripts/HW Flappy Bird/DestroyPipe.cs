@@ -6,10 +6,17 @@ using UnityEngine;
 public class DestroyPipe : MonoBehaviour
 {
     public float timeTillDespawn;
+    GameObject pipeManager;
     // Start is called before the first frame update
     void Start()
     {
-        Destroy(this.gameObject, timeTillDespawn);
+        Invoke("DespawnObject", timeTillDespawn);
     }
 
+    public void DespawnObject()
+    {
+        pipeManager = GameObject.Find("PipeManager");
+        pipeManager.GetComponent<SpawnPipe>().freezeList.Remove(this.gameObject);
+        Destroy(this.gameObject, timeTillDespawn);
+    }
 }

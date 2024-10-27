@@ -4,21 +4,29 @@ using UnityEngine;
 
 public class Jump : MonoBehaviour
 {
+    [SerializeField]
+    public AudioClip jumpNoise;
+
+
     public float jumpForce;
     Rigidbody2D rb;
     public float maxVelocity;
+    Death deathComponent;
     // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        deathComponent = GetComponent<Death>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(Input.GetKeyDown(KeyCode.Space))
+        if(Input.GetKeyDown(KeyCode.Space) && !deathComponent.isDead)
         {
             rb.velocity = new Vector2(0, jumpForce);
+
+            SoundFxManager.instance.PlaySFXClip(jumpNoise, transform);
         }
         if((rb.velocity.y) >= maxVelocity)
         {
