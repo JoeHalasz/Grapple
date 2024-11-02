@@ -11,16 +11,18 @@ public class ZoomOnScroll : MonoBehaviour
     private float zoomMin;
     [SerializeField][Range(0, 1)]
     private float zoomSpeed;
+    [SerializeField]
+    private bool flipZoom;
 
     void Update()
     {
         if (Input.mouseScrollDelta.y > 0)
         {
-            Camera.main.orthographicSize = Mathf.Clamp(Camera.main.orthographicSize + zoomSpeed, zoomMin, zoomMax);
+            Camera.main.orthographicSize = Mathf.Clamp(Camera.main.orthographicSize + (zoomSpeed*(flipZoom ? 1 : -1)), zoomMin, zoomMax);
         }
         else if (Input.mouseScrollDelta.y < 0)
         {
-            Camera.main.orthographicSize = Mathf.Clamp(Camera.main.orthographicSize - zoomSpeed, zoomMin, zoomMax);
+            Camera.main.orthographicSize = Mathf.Clamp(Camera.main.orthographicSize - (zoomSpeed*(flipZoom ? 1 : -1)), zoomMin, zoomMax);
         }
     }
 

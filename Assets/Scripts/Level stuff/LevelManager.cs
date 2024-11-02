@@ -72,6 +72,7 @@ public class LevelManager : MonoBehaviour
         if (movePlayer)
         {
             player.transform.position = level.startPos + offset;
+            player.GetComponent<Rigidbody2D>().velocity = new Vector2(0, 0);
         }
         return true;
     }
