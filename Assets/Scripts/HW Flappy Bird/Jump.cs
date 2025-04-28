@@ -22,7 +22,7 @@ public class Jump : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(Input.GetKeyDown(KeyCode.Space) && !deathComponent.isDead)
+        if((Input.GetKeyDown(KeyCode.Space) || Input.touchCount > 0) && !deathComponent.isDead)
         {
             rb.velocity = new Vector2(0, jumpForce);
 
